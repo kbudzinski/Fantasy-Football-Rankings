@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fantasy Draft Board</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Fantasy Draft Board</h1>
+      <p>2026 ESPN PPR · 12 teams · drag rows to rank instantly</p>
+    </div>
+    <div class="top-actions">
+      <button id="addPlayerBtn" class="secondary">Add player</button>
+      <button id="importBtn" class="secondary">Import</button>
+      <button id="exportBtn" class="secondary">Export</button>
+      <button id="resetBtn" class="danger ghost">Reset</button>
+      <input id="importFile" type="file" accept=".json,.csv" hidden>
+    </div>
+  </header>
+
+  <main>
+    <section class="summary" id="summary"></section>
+
+    <nav class="tabs" id="tabs" aria-label="Draft views"></nav>
+
+    <section class="toolbar">
+      <label class="search">
+        <span>Search</span>
+        <input id="searchInput" type="search" placeholder="Player, team, position…">
+      </label>
+      <label>
+        <span>Position</span>
+        <select id="positionFilter">
+          <option value="">All positions</option>
+          <option>QB</option><option>RB</option><option>WR</option>
+          <option>TE</option><option>K</option><option>DST</option>
+        </select>
+      </label>
+      <label class="toggle">
+        <input id="compactToggle" type="checkbox">
+        <span>Compact rows</span>
+      </label>
+      <div class="updated" id="updatedAt"></div>
+    </section>
+
+    <section id="boardView" class="table-shell">
+      <table id="playerTable">
+        <thead>
+          <tr>
+            <th class="drag-col"></th>
+            <th>Drafted</th>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Pos</th>
+            <th>Team</th>
+            <th>Bye</th>
+            <th>Tier</th>
+            <th>Market</th>
+            <th>ESPN</th>
+            <th>Yahoo</th>
+            <th>Sleeper</th>
+            <th>2026 Proj</th>
+            <th>2025 PPG</th>
+            <th>2024 PPG</th>
+            <th>News</th>
+          </tr>
+        </thead>
+        <tbody id="playerBody"></tbody>
+      </table>
+      <div id="emptyState" class="empty hidden">No players match these filters.</div>
+    </section>
+
+    <section id="newsView" class="news-view hidden">
+      <div id="newsList"></div>
+    </section>
+  </main>
+
+  <div id="drawerBackdrop" class="backdrop hidden"></div>
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <div class="eyebrow" id="drawerMeta"></div>
+        <h2 id="drawerName">Player</h2>
+      </div>
+      <button id="closeDrawer" class="icon-btn" aria-label="Close">×</button>
+    </div>
+    <div id="drawerContent"></div>
+  </aside>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="data/players.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
