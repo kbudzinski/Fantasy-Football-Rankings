@@ -1,4 +1,4 @@
-name: Daily fantasy data update
+name: Update rankings and deploy website
 
 on:
   workflow_dispatch:
@@ -7,28 +7,52 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  update:
+  update-and-deploy:
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
-      - uses: actions/setup-python@v5
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install updater dependencies
         run: pip install -r requirements.txt
 
-      - name: Update fantasy data
+      - name: Update rankings, projections, stats, and news
         run: python update_data.py
-        
-      - name: Commit updated data
+
+      - name: Save refreshed rankings to repository
         run: |
           git config user.name "fantasy-data-bot"
           git config user.email "actions@users.noreply.github.com"
           git add players.js
           git diff --cached --quiet || git commit -m "Daily fantasy data update"
           git push
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
