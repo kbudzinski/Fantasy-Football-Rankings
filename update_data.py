@@ -10,8 +10,8 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 
-ROOT = Path(__file__).resolve().parents[1]
-DATA_FILE = ROOT / "data" / "players.js"
+ROOT = Path(__file__).resolve().parent
+DATA_FILE = ROOT / "players.js"
 SEASON = 2026
 UA = {"User-Agent":"Mozilla/5.0 Fantasy Draft Free Updater"}
 
