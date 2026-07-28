@@ -1,0 +1,35 @@
+FANTASY WEBSITE FEATURE UPDATE
+
+Adds:
+- 2025 position finish
+- 2025 games played
+- FantasyPros PPR consensus rankings
+- Vegas/sportsbook season-long stat lines
+- Sorting by all new columns
+
+Removes:
+- News tab
+- News column
+- News updater
+
+UPLOAD THESE FOUR FILES TO THE ROOT OF YOUR GITHUB REPOSITORY:
+- index.html
+- app.js
+- styles.css
+- update_data.py
+
+Then:
+1. Commit the replacements to main.
+2. Open Actions.
+3. Run "Update rankings and deploy website".
+4. Wait for the green checkmark.
+5. Hard-refresh the website:
+   Mac: Cmd + Shift + R
+   Windows: Ctrl + Shift + R
+
+NOTES
+- "Vegas Yds" uses passing yards for QBs, rushing yards for RBs, and receiving yards for WRs/TEs.
+- "Vegas TD" uses passing TDs for QBs, rushing TDs for RBs, and receiving TDs for WRs/TEs.
+- Full available sportsbook lines appear when you click a player's name.
+- Sportsbook season markets are released gradually, so some players will be blank.
+- FantasyPros and sportsbook pages can change markup. The updater preserves prior successful values when a refresh fails.
