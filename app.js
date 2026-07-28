@@ -3,12 +3,13 @@
 
   const STORAGE_KEY = "fantasy-draft-free-v1";
   const USER_FIELDS = ["rank","drafted","draftedBy","overallPick","rosterSlot","notes","categories","tier"];
-  const TABS = ["Available","Drafted","All","QB","RB","WR","TE","K","DST","News"];
+  const TABS = ["Available","Drafted","All","QB","RB","WR","TE","K","DST"];
   const WEIGHTS = {talent:.25,volume:.20,offense:.10,floor:.15,ceiling:.15,safety:.10,schedule:.05};
   const SORT_DEFAULTS = {
     rank:"asc", name:"asc", pos:"asc", team:"asc", bye:"asc", tier:"asc",
-    market:"asc", espn:"asc", yahoo:"asc", sleeper:"asc", underdog:"asc",
-    proj2026:"desc", ppg2025:"desc", ppg2024:"desc", news:"desc", drafted:"asc"
+    market:"asc", fantasyPros:"asc", espn:"asc", yahoo:"asc", sleeper:"asc", underdog:"asc",
+    vegasYds:"desc", vegasTD:"desc", proj2026:"desc", finish2025:"asc",
+    games2025:"desc", ppg2025:"desc", ppg2024:"desc", drafted:"asc"
   };
 
   let state = {
@@ -28,7 +29,12 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const numberOrBlank = (v) => (v === "" || v == null || Number.isNaN(Number(v))) ? "" : Number(v);
-  const fmt = (v, digits=1) => v === "" || v == null || Number.isNaN(Number(v)) ? "—" : Number(v).toFixed(digits).replace(/\.0$/,"");
+  const fmt = (v, digits=1) => {
+    if (v === "" || v == null) return "—";
+    const n = Number(v);
+    if (Number.isNaN(n)) return String(v);
+    return n.toFixed(digits).replace(/\.0$/,"");
+  };
   const nowIso = () => new Date().toISOString();
 
   function load() {
@@ -106,6 +112,20 @@
       .filter(n => Number.isFinite(n) && n > 0);
     return ranks.length ? ranks.reduce((a,b)=>a+b,0)/ranks.length : "";
   }
+  function primaryVegasYards(p) {
+    const v = p.vegas || {};
+    if (p.pos === "QB") return numberOrBlank(v.passYds);
+    if (p.pos === "RB") return numberOrBlank(v.rushYds || v.recYds);
+    if (p.pos === "WR" || p.pos === "TE") return numberOrBlank(v.recYds || v.rushYds);
+    return "";
+  }
+  function primaryVegasTD(p) {
+    const v = p.vegas || {};
+    if (p.pos === "QB") return numberOrBlank(v.passTD);
+    if (p.pos === "RB") return numberOrBlank(v.rushTD || v.recTD);
+    if (p.pos === "WR" || p.pos === "TE") return numberOrBlank(v.recTD || v.rushTD);
+    return "";
+  }
 
   function sortValue(p, key) {
     switch (key) {
@@ -116,20 +136,19 @@
       case "bye": return numberOrBlank(p.bye);
       case "tier": return numberOrBlank(p.tier);
       case "market": return marketAverage(p);
+      case "fantasyPros": return numberOrBlank(p.sourceRanks?.fantasyPros);
       case "espn": return numberOrBlank(p.sourceRanks?.espn);
       case "yahoo": return numberOrBlank(p.sourceRanks?.yahoo);
       case "sleeper": return numberOrBlank(p.sourceRanks?.sleeper);
       case "underdog": return numberOrBlank(p.sourceRanks?.underdog);
+      case "vegasYds": return primaryVegasYards(p);
+      case "vegasTD": return primaryVegasTD(p);
       case "proj2026": return numberOrBlank(p.proj2026);
+      case "finish2025": return numberOrBlank(p.stats2025?.posFinish);
+      case "games2025": return numberOrBlank(p.stats2025?.gp);
       case "ppg2025": return numberOrBlank(p.stats2025?.ppg);
       case "ppg2024": return numberOrBlank(p.stats2024?.ppg);
       case "drafted": return p.drafted ? 1 : 0;
-      case "news": {
-        const flag = String(p.newsFlag || "").toUpperCase();
-        const priority = flag === "NEW" ? 3 : flag === "RECENT" ? 2 : flag ? 1 : 0;
-        const timestamp = p.newsDate ? new Date(p.newsDate).getTime() || 0 : 0;
-        return priority * 1e15 + timestamp;
-      }
       default: return Number(p.rank);
     }
   }
@@ -167,7 +186,6 @@
   }
 
   function visiblePlayers() {
-    if (state.activeTab === "News") return [];
     let list = state.players.slice();
     if (state.activeTab === "Available") list = list.filter(p => !p.drafted);
     else if (state.activeTab === "Drafted") list = list.filter(p => p.drafted);
@@ -181,9 +199,8 @@
   function render() {
     renderSummary();
     renderTabs();
-    $("boardView").classList.toggle("hidden", state.activeTab === "News");
-    $("newsView").classList.toggle("hidden", state.activeTab !== "News");
-    if (state.activeTab === "News") renderNews(); else renderTable();
+    $("boardView").classList.remove("hidden");
+    renderTable();
     updateSortUi();
     $("playerTable").classList.toggle("compact", state.compact);
     const updated = state.meta.updatedAt ? new Date(state.meta.updatedAt).toLocaleString() : "Using imported seed data";
@@ -196,10 +213,11 @@
       const m = marketAverage(p);
       return m && m - p.rank >= 15 && !p.drafted;
     }).length;
-    const newNews = state.players.filter(p => p.newsFlag === "NEW").length;
+    const fpLoaded = state.players.filter(p => Number(p.sourceRanks?.fantasyPros) > 0).length;
+    const vegasLoaded = state.players.filter(p => primaryVegasYards(p) !== "" || primaryVegasTD(p) !== "").length;
     $("summary").innerHTML = [
       ["Available",counts.Available],["Drafted",counts.Drafted],["Targets",targets],
-      ["New news",newNews],["Player pool",counts.All]
+      ["FantasyPros loaded",fpLoaded],["Vegas lines",vegasLoaded]
     ].map(([label,value]) => `<div class="stat"><div class="label">${label}</div><div class="value">${value}</div></div>`).join("");
   }
 
@@ -235,7 +253,6 @@
     $("emptyState").classList.toggle("hidden", list.length !== 0);
     $("playerBody").innerHTML = list.map(p => {
       const market = marketAverage(p);
-      const news = p.newsFlag ? `<span class="news-pill">${esc(p.newsFlag)}</span>` : "—";
       const rankMode = state.sortKey === "rank" && state.sortDir === "asc";
       return `<tr draggable="${rankMode}" data-key="${esc(p.key)}" class="${p.drafted?"drafted":""}">
         <td><span class="drag-handle ${rankMode?"":"disabled"}" title="${rankMode?"Drag entire row to change your ranking":"Switch sorting to My rank · Ascending to drag rows"}">⋮⋮</span></td>
@@ -247,14 +264,18 @@
         <td>${fmt(p.bye,0)}</td>
         <td>${fmt(p.tier,0)}</td>
         <td>${fmt(market,1)}</td>
+        <td>${fmt(p.sourceRanks?.fantasyPros,0)}</td>
         <td>${fmt(p.sourceRanks?.espn,1)}</td>
         <td>${fmt(p.sourceRanks?.yahoo,1)}</td>
         <td>${fmt(p.sourceRanks?.sleeper,1)}</td>
         <td>${fmt(p.sourceRanks?.underdog,1)}</td>
+        <td>${fmt(primaryVegasYards(p),1)}</td>
+        <td>${fmt(primaryVegasTD(p),1)}</td>
         <td>${fmt(p.proj2026,1)}</td>
+        <td>${fmt(p.stats2025?.posFinish,0)}</td>
+        <td>${fmt(p.stats2025?.gp,0)}</td>
         <td>${fmt(p.stats2025?.ppg,1)}</td>
         <td>${fmt(p.stats2024?.ppg,1)}</td>
-        <td>${news}</td>
       </tr>`;
     }).join("");
 
@@ -339,22 +360,6 @@
     state.players=ordered;
     save();render();
   }
-
-  function renderNews() {
-    if (!state.news.length) {
-      $("newsList").innerHTML = `<div class="empty">No linked news has been loaded yet. The free daily updater fills this tab.</div>`;
-      return;
-    }
-    $("newsList").innerHTML = state.news.map(n => `
-      <article class="news-card">
-        <h3>${esc(n.headline || "NFL update")}</h3>
-        <p>${esc(n.summary || "")}</p>
-        <div class="meta">${esc(n.player || "")} ${n.team ? "· "+esc(n.team) : ""} ${n.published ? "· "+new Date(n.published).toLocaleString() : ""}
-          ${n.url ? `· <a href="${esc(n.url)}" target="_blank" rel="noopener">Open source</a>` : ""}
-        </div>
-      </article>`).join("");
-  }
-
   function openDrawer(key) {
     state.drawerKey = key;
     const p = findPlayer(key);
@@ -411,13 +416,26 @@
           ${metricCard("Injury",p.injuryStatus)}
           ${metricCard("Bye",p.bye)}
         </div>
-        ${p.newsSummary ? `<p>${esc(p.newsSummary)}</p>` : ""}
+      </section>
+      <section class="drawer-section">
+        <h3>Vegas season totals</h3>
+        <div class="metric-grid">
+          ${metricCard("Pass Yards",p.vegas?.passYds)}
+          ${metricCard("Pass TD",p.vegas?.passTD)}
+          ${metricCard("Rush Yards",p.vegas?.rushYds)}
+          ${metricCard("Rush TD",p.vegas?.rushTD)}
+          ${metricCard("Rec Yards",p.vegas?.recYds)}
+          ${metricCard("Rec TD",p.vegas?.recTD)}
+          ${metricCard("Receptions",p.vegas?.receptions)}
+        </div>
+        <p class="metric-muted">Season-long sportsbook over/under lines when publicly available.</p>
       </section>
       <section class="drawer-section">
         <h3>2025 metrics</h3>
         <div class="metric-grid">
-          ${metricCard("Games",y25.gp)}${metricCard("PPR",y25.ppr)}${metricCard("PPG",y25.ppg)}
-          ${metricCard("Targets",y25.targets)}${metricCard("Carries",y25.carries)}${metricCard("TD",y25.td)}
+          ${metricCard("Position Finish",y25.posFinish)}${metricCard("Games",y25.gp)}${metricCard("PPR",y25.ppr)}
+          ${metricCard("PPG",y25.ppg)}${metricCard("Targets",y25.targets)}${metricCard("Carries",y25.carries)}
+          ${metricCard("TD",y25.td)}
         </div>
       </section>
       <section class="drawer-section">
@@ -470,8 +488,7 @@
     const payload = {
       exportedAt: nowIso(),
       meta: state.meta,
-      players: state.players,
-      news: state.news
+      players: state.players
     };
     download("fantasy-draft-backup.json", JSON.stringify(payload,null,2), "application/json");
   }

@@ -100,3 +100,7 @@ tbody tr.drop-after{box-shadow:inset 0 -3px 0 var(--blue)}
 .sortable.active-sort{background:#203154;color:#fff}
 .sort-indicator{display:inline-block;min-width:10px;margin-left:3px;color:var(--blue)}
 .drag-handle.disabled{opacity:.25;cursor:not-allowed}
+
+#playerTable{min-width:1680px}
+th[data-sort="vegasYds"],th[data-sort="vegasTD"]{color:#fde68a}
+td.vegas-value{font-variant-numeric:tabular-nums}

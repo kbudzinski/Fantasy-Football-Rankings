@@ -49,14 +49,18 @@
           <option value="bye">Bye week</option>
           <option value="tier">Tier</option>
           <option value="market">Market</option>
+          <option value="fantasyPros">FantasyPros</option>
           <option value="espn">ESPN</option>
           <option value="yahoo">Yahoo</option>
           <option value="sleeper">Sleeper</option>
           <option value="underdog">Underdog</option>
-          <option value="proj2026">2026 projection</option>
+          <option value="vegasYds">Vegas yards line</option>
+          <option value="vegasTD">Vegas TD line</option>
+          <option value="proj2026">2026 fantasy projection</option>
+          <option value="finish2025">2025 position finish</option>
+          <option value="games2025">2025 games played</option>
           <option value="ppg2025">2025 PPG</option>
           <option value="ppg2024">2024 PPG</option>
-          <option value="news">News</option>
           <option value="drafted">Drafted status</option>
         </select>
       </label>
@@ -81,23 +85,23 @@
             <th class="sortable" data-sort="bye" tabindex="0">Bye <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="tier" tabindex="0">Tier <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="market" tabindex="0">Market <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="fantasyPros" tabindex="0">FantasyPros <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="espn" tabindex="0">ESPN <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="yahoo" tabindex="0">Yahoo <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="sleeper" tabindex="0">Sleeper <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="underdog" tabindex="0">Underdog <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="vegasYds" tabindex="0">Vegas Yds <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="vegasTD" tabindex="0">Vegas TD <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="proj2026" tabindex="0">2026 Proj <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="finish2025" tabindex="0">2025 Finish <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="games2025" tabindex="0">2025 GP <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="ppg2025" tabindex="0">2025 PPG <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="ppg2024" tabindex="0">2024 PPG <span class="sort-indicator"></span></th>
-            <th class="sortable" data-sort="news" tabindex="0">News <span class="sort-indicator"></span></th>
           </tr>
         </thead>
         <tbody id="playerBody"></tbody>
       </table>
       <div id="emptyState" class="empty hidden">No players match these filters.</div>
-    </section>
-
-    <section id="newsView" class="news-view hidden">
-      <div id="newsList"></div>
     </section>
   </main>
 
