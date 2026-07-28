@@ -39,6 +39,28 @@
           <option>TE</option><option>K</option><option>DST</option>
         </select>
       </label>
+      <label>
+        <span>Sort by</span>
+        <select id="sortSelect">
+          <option value="rank">My rank</option>
+          <option value="name">Player name</option>
+          <option value="pos">Position</option>
+          <option value="team">NFL team</option>
+          <option value="bye">Bye week</option>
+          <option value="tier">Tier</option>
+          <option value="market">Market</option>
+          <option value="espn">ESPN</option>
+          <option value="yahoo">Yahoo</option>
+          <option value="sleeper">Sleeper</option>
+          <option value="underdog">Underdog</option>
+          <option value="proj2026">2026 projection</option>
+          <option value="ppg2025">2025 PPG</option>
+          <option value="ppg2024">2024 PPG</option>
+          <option value="news">News</option>
+          <option value="drafted">Drafted status</option>
+        </select>
+      </label>
+      <button id="sortDirBtn" class="secondary sort-direction" type="button">↑ Ascending</button>
       <label class="toggle">
         <input id="compactToggle" type="checkbox">
         <span>Compact rows</span>
@@ -51,21 +73,22 @@
         <thead>
           <tr>
             <th class="drag-col"></th>
-            <th>Drafted</th>
-            <th>Rank</th>
-            <th>Player</th>
-            <th>Pos</th>
-            <th>Team</th>
-            <th>Bye</th>
-            <th>Tier</th>
-            <th>Market</th>
-            <th>ESPN</th>
-            <th>Yahoo</th>
-            <th>Sleeper</th>
-            <th>2026 Proj</th>
-            <th>2025 PPG</th>
-            <th>2024 PPG</th>
-            <th>News</th>
+            <th class="sortable" data-sort="drafted" tabindex="0">Drafted <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="rank" tabindex="0">Rank <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="name" tabindex="0">Player <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="pos" tabindex="0">Pos <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="team" tabindex="0">Team <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="bye" tabindex="0">Bye <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="tier" tabindex="0">Tier <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="market" tabindex="0">Market <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="espn" tabindex="0">ESPN <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="yahoo" tabindex="0">Yahoo <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="sleeper" tabindex="0">Sleeper <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="underdog" tabindex="0">Underdog <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="proj2026" tabindex="0">2026 Proj <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="ppg2025" tabindex="0">2025 PPG <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="ppg2024" tabindex="0">2024 PPG <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="news" tabindex="0">News <span class="sort-indicator"></span></th>
           </tr>
         </thead>
         <tbody id="playerBody"></tbody>

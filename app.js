@@ -5,12 +5,19 @@
   const USER_FIELDS = ["rank","drafted","draftedBy","overallPick","rosterSlot","notes","categories","tier"];
   const TABS = ["Available","Drafted","All","QB","RB","WR","TE","K","DST","News"];
   const WEIGHTS = {talent:.25,volume:.20,offense:.10,floor:.15,ceiling:.15,safety:.10,schedule:.05};
+  const SORT_DEFAULTS = {
+    rank:"asc", name:"asc", pos:"asc", team:"asc", bye:"asc", tier:"asc",
+    market:"asc", espn:"asc", yahoo:"asc", sleeper:"asc", underdog:"asc",
+    proj2026:"desc", ppg2025:"desc", ppg2024:"desc", news:"desc", drafted:"asc"
+  };
 
   let state = {
     activeTab: "Available",
     query: "",
     position: "",
     compact: false,
+    sortKey: "rank",
+    sortDir: "asc",
     players: [],
     news: [],
     meta: {},
@@ -48,6 +55,8 @@
     state.news = source.news || [];
     state.meta = source.meta || {};
     state.compact = Boolean(saved.compact);
+    state.sortKey = SORT_DEFAULTS[saved.sortKey] ? saved.sortKey : "rank";
+    state.sortDir = saved.sortDir === "desc" ? "desc" : "asc";
     $("compactToggle").checked = state.compact;
     save();
   }
@@ -58,7 +67,12 @@
       USER_FIELDS.forEach(f => out[f] = structuredClone(p[f]));
       return out;
     });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({players:userPlayers,compact:state.compact}));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      players:userPlayers,
+      compact:state.compact,
+      sortKey:state.sortKey,
+      sortDir:state.sortDir
+    }));
   }
 
   function renumber(list = state.players) {
@@ -85,20 +99,83 @@
   }
 
   function marketAverage(p) {
-    const ranks = Object.values(p.sourceRanks || {}).map(Number).filter(n => n > 0);
+    // Average only individual sources. Do not double-count the existing aggregate "market" field.
+    const sourceKeys = ["fantasyPros","fantasyData","espn","yahoo","sleeper","cbs","nfl","underdog"];
+    const ranks = sourceKeys
+      .map(key => Number(p.sourceRanks?.[key]))
+      .filter(n => Number.isFinite(n) && n > 0);
     return ranks.length ? ranks.reduce((a,b)=>a+b,0)/ranks.length : "";
+  }
+
+  function sortValue(p, key) {
+    switch (key) {
+      case "rank": return Number(p.rank);
+      case "name": return String(p.name || "").toLowerCase();
+      case "pos": return String(p.pos || "").toLowerCase();
+      case "team": return String(p.team || "").toLowerCase();
+      case "bye": return numberOrBlank(p.bye);
+      case "tier": return numberOrBlank(p.tier);
+      case "market": return marketAverage(p);
+      case "espn": return numberOrBlank(p.sourceRanks?.espn);
+      case "yahoo": return numberOrBlank(p.sourceRanks?.yahoo);
+      case "sleeper": return numberOrBlank(p.sourceRanks?.sleeper);
+      case "underdog": return numberOrBlank(p.sourceRanks?.underdog);
+      case "proj2026": return numberOrBlank(p.proj2026);
+      case "ppg2025": return numberOrBlank(p.stats2025?.ppg);
+      case "ppg2024": return numberOrBlank(p.stats2024?.ppg);
+      case "drafted": return p.drafted ? 1 : 0;
+      case "news": {
+        const flag = String(p.newsFlag || "").toUpperCase();
+        const priority = flag === "NEW" ? 3 : flag === "RECENT" ? 2 : flag ? 1 : 0;
+        const timestamp = p.newsDate ? new Date(p.newsDate).getTime() || 0 : 0;
+        return priority * 1e15 + timestamp;
+      }
+      default: return Number(p.rank);
+    }
+  }
+
+  function comparePlayers(a, b) {
+    const av = sortValue(a, state.sortKey);
+    const bv = sortValue(b, state.sortKey);
+    const aBlank = av === "" || av == null || (typeof av === "number" && Number.isNaN(av));
+    const bBlank = bv === "" || bv == null || (typeof bv === "number" && Number.isNaN(bv));
+
+    // Missing rankings/stats always stay at the bottom in either direction.
+    if (aBlank && !bBlank) return 1;
+    if (!aBlank && bBlank) return -1;
+
+    let result = 0;
+    if (typeof av === "string" || typeof bv === "string") {
+      result = String(av).localeCompare(String(bv), undefined, {numeric:true, sensitivity:"base"});
+    } else {
+      result = Number(av) - Number(bv);
+    }
+    if (state.sortDir === "desc") result *= -1;
+    return result || Number(a.rank) - Number(b.rank) || a.name.localeCompare(b.name);
+  }
+
+  function setSort(key, forceDirection) {
+    if (!SORT_DEFAULTS[key]) return;
+    if (state.sortKey === key && !forceDirection) {
+      state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+    } else {
+      state.sortKey = key;
+      state.sortDir = forceDirection || SORT_DEFAULTS[key];
+    }
+    save();
+    render();
   }
 
   function visiblePlayers() {
     if (state.activeTab === "News") return [];
-    let list = state.players.slice().sort((a,b)=>a.rank-b.rank);
+    let list = state.players.slice();
     if (state.activeTab === "Available") list = list.filter(p => !p.drafted);
     else if (state.activeTab === "Drafted") list = list.filter(p => p.drafted);
     else if (["QB","RB","WR","TE","K","DST"].includes(state.activeTab)) list = list.filter(p => p.pos === state.activeTab);
     if (state.position) list = list.filter(p => p.pos === state.position);
     const q = state.query.trim().toLowerCase();
     if (q) list = list.filter(p => [p.name,p.team,p.pos].some(v => String(v).toLowerCase().includes(q)));
-    return list;
+    return list.sort(comparePlayers);
   }
 
   function render() {
@@ -107,6 +184,7 @@
     $("boardView").classList.toggle("hidden", state.activeTab === "News");
     $("newsView").classList.toggle("hidden", state.activeTab !== "News");
     if (state.activeTab === "News") renderNews(); else renderTable();
+    updateSortUi();
     $("playerTable").classList.toggle("compact", state.compact);
     const updated = state.meta.updatedAt ? new Date(state.meta.updatedAt).toLocaleString() : "Using imported seed data";
     $("updatedAt").textContent = `Data: ${updated}`;
@@ -137,14 +215,30 @@
     }));
   }
 
+  function updateSortUi() {
+    if ($("sortSelect")) $("sortSelect").value = state.sortKey;
+    if ($("sortDirBtn")) {
+      $("sortDirBtn").textContent = state.sortDir === "asc" ? "↑ Ascending" : "↓ Descending";
+      $("sortDirBtn").title = "Reverse the current sort";
+    }
+    document.querySelectorAll("th[data-sort]").forEach(th => {
+      const active = th.dataset.sort === state.sortKey;
+      th.classList.toggle("active-sort", active);
+      const indicator = th.querySelector(".sort-indicator");
+      if (indicator) indicator.textContent = active ? (state.sortDir === "asc" ? "▲" : "▼") : "";
+      th.setAttribute("aria-sort", active ? (state.sortDir === "asc" ? "ascending" : "descending") : "none");
+    });
+  }
+
   function renderTable() {
     const list = visiblePlayers();
     $("emptyState").classList.toggle("hidden", list.length !== 0);
     $("playerBody").innerHTML = list.map(p => {
       const market = marketAverage(p);
       const news = p.newsFlag ? `<span class="news-pill">${esc(p.newsFlag)}</span>` : "—";
-      return `<tr draggable="true" data-key="${esc(p.key)}" class="${p.drafted?"drafted":""}">
-        <td><span class="drag-handle" title="Drag entire row">⋮⋮</span></td>
+      const rankMode = state.sortKey === "rank" && state.sortDir === "asc";
+      return `<tr draggable="${rankMode}" data-key="${esc(p.key)}" class="${p.drafted?"drafted":""}">
+        <td><span class="drag-handle ${rankMode?"":"disabled"}" title="${rankMode?"Drag entire row to change your ranking":"Switch sorting to My rank · Ascending to drag rows"}">⋮⋮</span></td>
         <td><input class="draft-check" type="checkbox" ${p.drafted?"checked":""} aria-label="Mark ${esc(p.name)} drafted"></td>
         <td><input class="rank-input" type="number" min="1" max="${state.players.length}" value="${p.rank}"></td>
         <td><div class="player-cell"><span class="player-name">${esc(p.name)}</span></div></td>
@@ -156,6 +250,7 @@
         <td>${fmt(p.sourceRanks?.espn,1)}</td>
         <td>${fmt(p.sourceRanks?.yahoo,1)}</td>
         <td>${fmt(p.sourceRanks?.sleeper,1)}</td>
+        <td>${fmt(p.sourceRanks?.underdog,1)}</td>
         <td>${fmt(p.proj2026,1)}</td>
         <td>${fmt(p.stats2025?.ppg,1)}</td>
         <td>${fmt(p.stats2024?.ppg,1)}</td>
@@ -166,6 +261,10 @@
     $("playerBody").querySelectorAll("tr").forEach(row => {
       const key = row.dataset.key;
       row.addEventListener("dragstart", e => {
+        if (!(state.sortKey === "rank" && state.sortDir === "asc")) {
+          e.preventDefault();
+          return;
+        }
         dragKey = key;
         row.classList.add("dragging");
         e.dataTransfer.effectAllowed = "move";
@@ -444,6 +543,22 @@
 
   $("searchInput").addEventListener("input", e => {state.query=e.target.value;render();});
   $("positionFilter").addEventListener("change", e => {state.position=e.target.value;render();});
+  $("sortSelect").addEventListener("change", e => setSort(e.target.value, SORT_DEFAULTS[e.target.value]));
+  $("sortDirBtn").addEventListener("click", () => {
+    state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+    save();
+    render();
+  });
+  document.querySelectorAll("th[data-sort]").forEach(th => {
+    const activate = () => setSort(th.dataset.sort);
+    th.addEventListener("click", activate);
+    th.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        activate();
+      }
+    });
+  });
   $("compactToggle").addEventListener("change", e => {state.compact=e.target.checked;save();render();});
   $("addPlayerBtn").addEventListener("click",addPlayer);
   $("exportBtn").addEventListener("click",exportData);

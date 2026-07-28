@@ -93,3 +93,10 @@ tbody tr.drop-after{box-shadow:inset 0 -3px 0 var(--blue)}
   .topbar{align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}
   main{padding:15px}.summary{grid-template-columns:repeat(2,1fr)}.updated{width:100%;margin-left:0}
 }
+
+.sort-direction{align-self:end;margin-bottom:0;min-width:126px}
+.sortable{cursor:pointer;user-select:none;transition:background .12s,color .12s}
+.sortable:hover,.sortable:focus{background:#1d2b49;color:#fff;outline:none}
+.sortable.active-sort{background:#203154;color:#fff}
+.sort-indicator{display:inline-block;min-width:10px;margin-left:3px;color:var(--blue)}
+.drag-handle.disabled{opacity:.25;cursor:not-allowed}
